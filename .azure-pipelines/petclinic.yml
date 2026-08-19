@@ -51,3 +51,35 @@ stages:
       displayName: "Publish SonarQube Results"
       inputs:
         pollingTimeoutSec: '300'
+
+- stage: Docker
+  displayName: "Build and Push Docker Image"
+
+  dependsOn: CI
+
+  jobs:
+
+  - job: Docker
+    displayName: "Build and Push to ACR"
+
+    steps:
+
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: "Build and Push Image to ACR"
+      inputs:
+        azureSubscription: 'Pet-Clinic-Azure'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name petclinicvikasacr
+
+          docker build -t petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) .
+
+          docker push petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)
+
+          docker tag petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
+            petclinicvikasacr.azurecr.io/spring-petclinic:latest
+
+          docker push petclinicvikasacr.azurecr.io/spring-petclinic:latest
