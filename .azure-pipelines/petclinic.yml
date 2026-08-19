@@ -1,36 +1,49 @@
 trigger:
 - main
 
-pool:
-  vmImage: 'ubuntu-latest'
-
 stages:
+
 - stage: CI
   displayName: "CI"
   jobs:
+
   - job: Security
     displayName: "Gitleaks Scan"
+    pool:
+      name: 'Vikas-Pool'
+
     steps:
     - checkout: self
+
     - script: |
         gitleaks detect --source . --exit-code 1
       displayName: "Run Gitleaks"
 
+
   - job: Lint
     displayName: "Code Lint"
     dependsOn: Security
+    pool:
+      name: 'Vikas-Pool'
+
     steps:
     - checkout: self
+
     - script: |
         chmod +x mvnw
         ./mvnw spring-javaformat:validate
       displayName: "Run Lint"
 
+
   - job: Build
     displayName: "Maven Build and SonarQube"
     dependsOn: Lint
+    pool:
+      name: 'Vikas-Pool'
+
     steps:
     - checkout: self
+
     - task: SonarQubePrepare@7
       displayName: "Prepare SonarQube"
       inputs:
@@ -52,38 +65,57 @@ stages:
       inputs:
         pollingTimeoutSec: '300'
 
+
+
 - stage: Docker
   displayName: "Build and Push Docker Image"
   dependsOn: CI
 
   jobs:
+
   - job: Docker
     displayName: "Build and Push to ACR"
+    pool:
+      vmImage: 'ubuntu-latest'
 
     steps:
+
     - checkout: self
 
     - task: AzureCLI@2
-      displayName: "Build Docker Image"
+      displayName: "Build and Push Image to ACR"
       inputs:
         azureSubscription: 'Pet-Clinic-Azure'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          docker build -t petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) .
 
-    - task: AzureCLI@2
-      displayName: "Login to ACR and Push"
-      inputs:
-        azureSubscription: 'Pet-Clinic-Azure'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
+          echo "=== Azure CLI ==="
+          az version
+
+          echo "=== Docker Version ==="
+          docker version
+
+          echo "=== Login to ACR ==="
           az acr login --name petclinicvikasacr
 
-          docker push petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)
+          echo "=== Build Docker Image ==="
+          docker build \
+            -t petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
+            .
 
-          docker tag petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
+          echo "=== Tag Latest ==="
+          docker tag \
+            petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
             petclinicvikasacr.azurecr.io/spring-petclinic:latest
 
-          docker push petclinicvikasacr.azurecr.io/spring-petclinic:latest
+          echo "=== Push Build ID Image ==="
+          docker push \
+            petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)
+
+          echo "=== Push Latest Image ==="
+          docker push \
+            petclinicvikasacr.azurecr.io/spring-petclinic:latest
+
+          echo "=== Docker Images ==="
+          docker images | grep spring-petclinic
