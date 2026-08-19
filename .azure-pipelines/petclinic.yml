@@ -6,15 +6,17 @@ pool:
 
 stages:
 
+
 - stage: CI
-  displayName: "CI Pipeline"
+  displayName: "CI"
 
   jobs:
 
-  - job: Gitleaks
-    displayName: "Secret Scan"
+  - job: Security
+    displayName: "Gitleaks Scan"
 
     steps:
+
     - checkout: self
 
     - script: |
@@ -25,9 +27,10 @@ stages:
   - job: Lint
     displayName: "Code Lint"
 
-    dependsOn: Gitleaks
+    dependsOn: Security
 
     steps:
+
     - checkout: self
 
     - script: |
@@ -37,30 +40,32 @@ stages:
 
 
   - job: Build
-    displayName: "Build and Test"
+    displayName: "Maven Build and Test"
 
     dependsOn: Lint
 
     steps:
+
     - checkout: self
+
+    - task: SonarQubePrepare@7
+      displayName: "Prepare SonarQube"
+      inputs:
+        SonarQube: 'petclinic-sonarqube'
+        scannerMode: 'Other'
+        extraProperties: |
+          sonar.projectKey=spring-petclinic-devops-e2e
+          sonar.projectName=Spring PetClinic DevOps E2E
 
     - script: |
         chmod +x mvnw
         ./mvnw clean verify
       displayName: "Maven Build and Test"
 
+    - task: SonarQubeAnalyze@7
+      displayName: "SonarQube Analysis"
 
-  - job: SonarQube
-    displayName: "SonarQube Analysis"
-
-    dependsOn: Build
-
-    steps:
-    - checkout: self
-
-    - script: |
-        chmod +x mvnw
-        ./mvnw sonar:sonar \
-          -Dsonar.host.url=$(SONAR_HOST_URL) \
-          -Dsonar.token=$(SONAR_TOKEN)
-      displayName: "Run SonarQube"
+    - task: SonarQubePublish@7
+      displayName: "Publish SonarQube Results"
+      inputs:
+        pollingTimeoutSec: '300'
