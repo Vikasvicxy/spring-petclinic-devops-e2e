@@ -55,20 +55,35 @@ stages:
 - stage: Docker
   displayName: "Build and Push Docker Image"
   dependsOn: CI
+
   jobs:
   - job: Docker
     displayName: "Build and Push to ACR"
+
     steps:
     - checkout: self
+
     - task: AzureCLI@2
-      displayName: "Build and Push Image using ACR Tasks"
+      displayName: "Build Docker Image"
       inputs:
         azureSubscription: 'Pet-Clinic-Azure'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          az acr build \
-            --registry petclinicvikasacr \
-            --image spring-petclinic:$(Build.BuildId) \
-            --image spring-petclinic:latest \
-            .
+          docker build -t petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) .
+
+    - task: AzureCLI@2
+      displayName: "Login to ACR and Push"
+      inputs:
+        azureSubscription: 'Pet-Clinic-Azure'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name petclinicvikasacr
+
+          docker push petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)
+
+          docker tag petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
+            petclinicvikasacr.azurecr.io/spring-petclinic:latest
+
+          docker push petclinicvikasacr.azurecr.io/spring-petclinic:latest
