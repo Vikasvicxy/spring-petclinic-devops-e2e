@@ -44,7 +44,7 @@ stages:
 
     - script: |
         chmod +x mvnw
-        ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
+        ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar -Dsonar.branch.name=
       displayName: "Maven Build, Test and SonarQube"
 
     - task: SonarQubePublish@7
