@@ -39,10 +39,12 @@ stages:
         extraProperties: |
           sonar.projectKey=spring-petclinic-devops-e2e
           sonar.projectName=Spring PetClinic DevOps E2E
+
     - script: |
         chmod +x mvnw
-        ./mvnw clean verify sonar:sonar
+        ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar
       displayName: "Maven Build, Test and SonarQube"
+
     - task: SonarQubePublish@7
       displayName: "Publish SonarQube Results"
       inputs:
