@@ -39,6 +39,7 @@ stages:
         extraProperties: |
           sonar.projectKey=spring-petclinic-devops-e2e
           sonar.projectName=Spring PetClinic DevOps E2E
+          sonar.branch.name=
 
     - script: |
         chmod +x mvnw
