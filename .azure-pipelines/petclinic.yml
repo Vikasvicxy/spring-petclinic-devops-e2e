@@ -51,7 +51,7 @@ stages:
     - task: SonarQubePrepare@7
       displayName: "Prepare SonarQube"
       inputs:
-        SonarQube: 'petclinic-sonarqube'
+        SonarQube: 'Pet-Clinic-SVC'
         scannerMode: 'Other'
         extraProperties: |
           sonar.projectKey=spring-petclinic-devops-e2e
