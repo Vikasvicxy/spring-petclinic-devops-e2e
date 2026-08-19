@@ -5,49 +5,32 @@ pool:
   name: Vikas-Pool
 
 stages:
-
-
 - stage: CI
   displayName: "CI"
-
   jobs:
-
   - job: Security
     displayName: "Gitleaks Scan"
-
     steps:
-
     - checkout: self
-
     - script: |
         gitleaks detect --source . --exit-code 1
       displayName: "Run Gitleaks"
 
-
   - job: Lint
     displayName: "Code Lint"
-
     dependsOn: Security
-
     steps:
-
     - checkout: self
-
     - script: |
         chmod +x mvnw
         ./mvnw spring-javaformat:validate
       displayName: "Run Lint"
 
-
   - job: Build
-    displayName: "Maven Build and Test"
-
+    displayName: "Maven Build and SonarQube"
     dependsOn: Lint
-
     steps:
-
     - checkout: self
-
     - task: SonarQubePrepare@7
       displayName: "Prepare SonarQube"
       inputs:
@@ -56,15 +39,10 @@ stages:
         extraProperties: |
           sonar.projectKey=spring-petclinic-devops-e2e
           sonar.projectName=Spring PetClinic DevOps E2E
-
     - script: |
         chmod +x mvnw
-        ./mvnw clean verify
-      displayName: "Maven Build and Test"
-
-    - task: SonarQubeAnalyze@7
-      displayName: "SonarQube Analysis"
-
+        ./mvnw clean verify sonar:sonar
+      displayName: "Maven Build, Test and SonarQube"
     - task: SonarQubePublish@7
       displayName: "Publish SonarQube Results"
       inputs:
