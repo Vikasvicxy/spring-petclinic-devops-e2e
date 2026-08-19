@@ -40,6 +40,7 @@ stages:
           sonar.projectKey=spring-petclinic-devops-e2e
           sonar.projectName=Spring PetClinic DevOps E2E
           sonar.branch.name=
+          sonar.scanner.skipJreProvisioning=true
 
     - script: |
         chmod +x mvnw
