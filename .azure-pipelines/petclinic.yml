@@ -11,14 +11,56 @@ stages:
 
   jobs:
 
+  - job: Gitleaks
+    displayName: "Secret Scan"
+
+    steps:
+    - checkout: self
+
+    - script: |
+        gitleaks detect --source . --exit-code 1
+      displayName: "Run Gitleaks"
+
+
+  - job: Lint
+    displayName: "Code Lint"
+
+    dependsOn: Gitleaks
+
+    steps:
+    - checkout: self
+
+    - script: |
+        chmod +x mvnw
+        ./mvnw spring-javaformat:validate
+      displayName: "Run Lint"
+
+
   - job: Build
     displayName: "Build and Test"
 
-    steps:
+    dependsOn: Lint
 
+    steps:
     - checkout: self
 
     - script: |
         chmod +x mvnw
         ./mvnw clean verify
       displayName: "Maven Build and Test"
+
+
+  - job: SonarQube
+    displayName: "SonarQube Analysis"
+
+    dependsOn: Build
+
+    steps:
+    - checkout: self
+
+    - script: |
+        chmod +x mvnw
+        ./mvnw sonar:sonar \
+          -Dsonar.host.url=$(SONAR_HOST_URL) \
+          -Dsonar.token=$(SONAR_TOKEN)
+      displayName: "Run SonarQube"
