@@ -62,3 +62,22 @@ build/
 Thumbs.db
 
 .env
+
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+crash.log
+crash.*.log
+
+*.tfvars
+*.tfvars.json
+!example.tfvars
+
+.env
+.env.*
+*.pem
+*.key
+
+docker-compose.override.yml
