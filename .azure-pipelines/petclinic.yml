@@ -1,0 +1,24 @@
+trigger:
+- main
+
+pool:
+  name: Vikas-Pool
+
+stages:
+
+- stage: CI
+  displayName: "CI Pipeline"
+
+  jobs:
+
+  - job: Build
+    displayName: "Build and Test"
+
+    steps:
+
+    - checkout: self
+
+    - script: |
+        chmod +x mvnw
+        ./mvnw clean verify
+      displayName: "Maven Build and Test"
