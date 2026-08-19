@@ -90,32 +90,73 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
 
-          echo "=== Azure CLI ==="
+          echo "Azure CLI"
           az version
 
-          echo "=== Docker Version ==="
+          echo "Docker Version"
           docker version
 
-          echo "=== Login to ACR ==="
+          echo "Login to ACR"
           az acr login --name petclinicvikasacr
 
-          echo "=== Build Docker Image ==="
+          echo " Build Docker Image "
           docker build \
             -t petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
             .
 
-          echo "=== Tag Latest ==="
+          echo "Tag Latest"
           docker tag \
             petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) \
             petclinicvikasacr.azurecr.io/spring-petclinic:latest
 
-          echo "=== Push Build ID Image ==="
+          echo "Push Build ID Image"
           docker push \
             petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)
 
-          echo "=== Push Latest Image ==="
+          echo "Push Latest Image"
           docker push \
             petclinicvikasacr.azurecr.io/spring-petclinic:latest
 
-          echo "=== Docker Images ==="
+          echo "Docker Images"
           docker images | grep spring-petclinic
+
+- stage: Deploy_DEV
+  displayName: "Deploy to DEV - Container Apps"
+  dependsOn: Docker
+
+  jobs:
+
+  - job: DeployDev
+    displayName: "Deploy Spring PetClinic to DEV"
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+
+    - task: AzureCLI@2
+      displayName: "Deploy to Azure Container Apps"
+      inputs:
+        azureSubscription: 'Pet-Clinic-Azure'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+
+          echo "Azure CLI"
+          az version
+
+          echo "Deploying image:"
+          echo "petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)"
+
+          az containerapp update \
+            --name petclinic-dev \
+            --resource-group petclinic-rg \
+            --image petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId)
+
+          echo "Deployment completed"
+
+          echo "Container App Status"
+          az containerapp show \
+            --name petclinic-dev \
+            --resource-group petclinic-rg \
+            --query "{status:properties.runningStatus,image:properties.template.containers[0].image,url:properties.configuration.ingress.fqdn}" \
+            -o table
