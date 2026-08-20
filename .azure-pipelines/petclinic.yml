@@ -160,3 +160,93 @@ stages:
             --resource-group petclinic-rg \
             --query "{status:properties.runningStatus,image:properties.template.containers[0].image,url:properties.configuration.ingress.fqdn}" \
             -o table
+
+# DEPLOY TO UAT (AKS)
+
+- stage: DeployUAT
+  displayName: "Deploy to UAT (AKS)"
+  dependsOn: Docker
+  jobs:
+  - deployment: DeployUATAKS
+    displayName: "Deploy to AKS UAT"
+    environment: 'uat'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: KubectlInstaller@0
+            displayName: "Install Kubectl"
+            inputs:
+              kubectlVersion: 'latest'
+
+          - task: AzureCLI@2
+            displayName: "Deploy to UAT Namespace"
+            inputs:
+              azureSubscription: 'Pet-Clinic-Azure'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Connecting to AKS..."
+                az aks get-credentials --resource-group petclinic-rg --name petclinic-aks --overwrite-existing
+                
+                echo "Ensuring UAT namespace exists..."
+                kubectl create namespace uat --dry-run=client -o yaml | kubectl apply -f -
+                
+                echo "Applying Kubernetes manifests to UAT..."
+                kubectl apply -f k8s/ -n uat
+                
+                echo "Updating container image to build $(Build.BuildId)..."
+                kubectl set image deployment/petclinic workload=petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) -n uat
+                
+                echo "Verifying rollout..."
+                kubectl rollout status deployment/petclinic -n uat --timeout=180s
+                kubectl get pods,svc -n uat
+
+#  DEPLOY TO PROD (AKS)
+
+- stage: DeployProd
+  displayName: "Deploy to PROD (AKS)"
+  dependsOn: DeployUAT
+  jobs:
+  - deployment: DeployProdAKS
+    displayName: "Deploy to AKS PROD"
+    environment: 'prod'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: KubectlInstaller@0
+            displayName: "Install Kubectl"
+            inputs:
+              kubectlVersion: 'latest'
+
+          - task: AzureCLI@2
+            displayName: "Deploy to PROD Namespace"
+            inputs:
+              azureSubscription: 'Pet-Clinic-Azure'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Connecting to AKS..."
+                az aks get-credentials --resource-group petclinic-rg --name petclinic-aks --overwrite-existing
+                
+                echo "Ensuring PROD namespace exists..."
+                kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
+                
+                echo "Applying Kubernetes manifests to PROD..."
+                kubectl apply -f k8s/ -n prod
+                
+                echo "Updating container image to build $(Build.BuildId)..."
+                kubectl set image deployment/petclinic workload=petclinicvikasacr.azurecr.io/spring-petclinic:$(Build.BuildId) -n prod
+                
+                echo "Verifying rollout..."
+                kubectl rollout status deployment/petclinic -n prod --timeout=180s
+                kubectl get pods,svc -n prod            
